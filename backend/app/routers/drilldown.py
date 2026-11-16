@@ -58,6 +58,15 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     return ActionResult(ok=True, message=message, entry=entry)
 
 
+@router.get("/{entry_id}/snapshot-gaps")
+def snapshot_gaps(entry_id: int, snapshot_id: int | None = Query(default=None, description="指定快照 id，默认取最新已生成快照")) -> dict[str, Any]:
+    """消费筛选条件快照，沿调用链（下钻→快照→预设→维度映射）查找数据缺口。"""
+    result, message = service.snapshot_gaps(entry_id, snapshot_id=snapshot_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail=message)
+    return {"ok": True, "message": message, **result}
+
+
 @router.get("/export")
 def export_entries() -> dict[str, Any]:
     """导出多维下钻清单：返回当前过滤条件下的全量数据。"""

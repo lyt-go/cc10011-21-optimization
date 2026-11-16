@@ -24,5 +24,6 @@ from app.routers import viztemplate as router_viztemplate
 from app.routers import subscription as router_subscription
 from app.routers import dimensionmap as router_dimensionmap
 from app.routers import qualityscore as router_qualityscore
+from app.routers import filtersnapshot as router_filtersnapshot
 
-ROUTERS = [router_realtimemetric, router_dashboard, router_drilldown, router_threshold, router_anomalydetect, router_dataservice, router_alarmhistory, router_comparison, router_aggregate, router_filterpreset, router_userinsight, router_eventanalysis, router_segmentprofile, router_trendforecast, router_viztemplate, router_subscription, router_dimensionmap, router_qualityscore]
+ROUTERS = [router_realtimemetric, router_dashboard, router_drilldown, router_threshold, router_anomalydetect, router_dataservice, router_alarmhistory, router_comparison, router_aggregate, router_filterpreset, router_userinsight, router_eventanalysis, router_segmentprofile, router_trendforecast, router_viztemplate, router_subscription, router_dimensionmap, router_qualityscore, router_filtersnapshot]

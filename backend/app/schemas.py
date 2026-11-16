@@ -244,3 +244,15 @@ class QualityscoreEntry(BaseModel):
     field_5: str | None = None  # 一致性权重
     field_6: str | None = None  # 评分周期
     field_7: str | None = None  # 总分数
+
+class FiltersnapshotEntry(BaseModel):
+    """筛选条件快照明细结构。"""
+
+    field_0: str | None = None  # 快照编号
+    field_1: str | None = None  # 预设编号
+    field_2: str | None = None  # 预设名称
+    field_3: str | None = None  # 消费方
+    field_4: str | None = None  # 当前阶段
+    field_5: str | None = None  # 失效维度
+    field_6: str | None = None  # 失效显示列
+    field_7: str | None = None  # 使用次数

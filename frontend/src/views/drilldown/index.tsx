@@ -41,11 +41,23 @@ const stats = [
 
 type Row = Record<string, string | number | null>
 
+type LevelCheck = { 层级: number; 维度: string; 状态: string; 说明: string }
+type GapResult = {
+  路径编号: string
+  快照编号: string
+  预设编号: string
+  调用链: string[]
+  层级检查: LevelCheck[]
+  数据缺口: LevelCheck[]
+}
+
 export default function DrilldownView() {
   const [rows, setRows] = useState<Row[]>([])
   const [total, setTotal] = useState(0)
   const [errorMessage, setErrorMessage] = useState('')
   const [filters, setFilters] = useState<Record<string, string>>({})
+  const [gapResult, setGapResult] = useState<GapResult | null>(null)
+  const [gapMessage, setGapMessage] = useState('')
   const filterFields = useMemo(() => columns.slice(0, 3), [])
 
   const reload = useCallback(async () => {
@@ -81,6 +93,24 @@ export default function DrilldownView() {
       await reload()
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : '多维下钻操作失败')
+    }
+  }
+
+  async function checkGaps(row: Row) {
+    setErrorMessage('')
+    setGapResult(null)
+    setGapMessage('')
+    try {
+      const response = await request(`${ENDPOINT}/${row.id}/snapshot-gaps`)
+      const payload = await response.json()
+      if (!response.ok) {
+        setErrorMessage(payload.detail ?? '数据缺口检查失败')
+        return
+      }
+      setGapResult(payload as GapResult)
+      setGapMessage(payload.message ?? '')
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : '数据缺口检查失败')
     }
   }
 
@@ -137,6 +167,9 @@ export default function DrilldownView() {
             <tr key={String(row.id)}>
               {columns.map((column) => <td key={column}>{row[column] ?? '—'}</td>)}
               <td className="row-actions">
+                <button className="link" type="button" onClick={() => void checkGaps(row)}>
+                  缺口检查
+                </button>
                 {actions.map((action) => (
                   <button key={action} className="link" type="button" onClick={() => void runAction(action, row)}>
                     {action}
@@ -157,6 +190,42 @@ export default function DrilldownView() {
         <span>共 {total} 条多维下钻记录</span>
         {errorMessage && <span className="error-text">{errorMessage}</span>}
       </footer>
+
+      {gapResult && (
+        <div className="panel gap-result">
+          <h3>数据缺口检查：{gapResult.路径编号}</h3>
+          <p className="panel-desc">
+            消费快照 {gapResult.快照编号}（预设 {gapResult.预设编号}）；调用链：{gapResult.调用链.join(' → ')}。{gapMessage}
+          </p>
+          <table className="sub-table">
+            <thead>
+              <tr><th>层级</th><th>维度</th><th>状态</th><th>说明</th></tr>
+            </thead>
+            <tbody>
+              {gapResult.层级检查.map((check) => (
+                <tr key={`${gapResult.路径编号}-${check.层级}`}>
+                  <td>{check.层级}</td>
+                  <td>{check.维度}</td>
+                  <td>
+                    <span className={`tag ${check.状态 === '已覆盖' ? 'ok' : check.状态 === '失效' ? 'danger' : 'warn'}`}>
+                      {check.状态}
+                    </span>
+                  </td>
+                  <td>{check.说明}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {gapResult.数据缺口.length > 0 && (
+            <p className="panel-desc">
+              数据缺口：
+              {gapResult.数据缺口.map((gap) => (
+                <span key={`gap-${gap.层级}`} className="tag danger">第{gap.层级}层 {gap.维度}（{gap.状态}）</span>
+              ))}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   )
 }

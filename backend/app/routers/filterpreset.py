@@ -7,10 +7,12 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas import ActionResult, EntryPayload, PageResult
 from app.services.filterpreset import FilterpresetService
+from app.services.filtersnapshot import STAGES, FiltersnapshotService
 
 router = APIRouter(prefix="/api/filterpreset", tags=["筛选预设"])
 
 service = FilterpresetService()
+snapshot_service = FiltersnapshotService()
 
 LIST_FIELDS = ["预设编号", "预设名称", "维度条件组", "时间范围", "排序规则", "显示列", "共享状态", "使用次数"]
 STATUSES = ["草稿", "预设评审中", "已发布", "已废弃"]
@@ -56,6 +58,27 @@ def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
     if entry is None:
         return ActionResult(ok=False, message=message)
     return ActionResult(ok=True, message=message, entry=entry)
+
+
+@router.post("/{entry_id}/apply", response_model=ActionResult)
+def apply_preset(entry_id: int, payload: EntryPayload) -> ActionResult:
+    """套用预设：解析维度条件组并套用查询，分阶段生成筛选条件数据快照。
+
+    values 支持：显式条件（文本或 JSON，与预设冲突时显式条件优先）、消费方、
+    演练中断阶段（可选，取值见流水线阶段名，用于验证中断恢复）。
+    """
+    fail_at_stage = str(payload.values.get("演练中断阶段") or "").strip() or None
+    if fail_at_stage and fail_at_stage not in STAGES:
+        return ActionResult(ok=False, message=f"演练中断阶段必须是：{'、'.join(STAGES)}")
+    snapshot, message = snapshot_service.apply_preset(
+        entry_id,
+        explicit_raw=payload.values.get("显式条件"),
+        consumer=str(payload.values.get("消费方") or "多维下钻"),
+        fail_at_stage=fail_at_stage,
+    )
+    if snapshot is None:
+        return ActionResult(ok=False, message=message)
+    return ActionResult(ok=True, message=message, entry=snapshot)
 
 
 @router.get("/export")
